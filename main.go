@@ -25,4 +25,16 @@ func main() {
 	}
 
 	// TODO: set the client for icmp and arp requests
+
+	c, err := SetClient(ifi)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer c.Close()
+
+	if err = c.Conn.SetDeadline(time.Now().Add(time.Second * 2)); err != nil {
+		log.Fatal(err)
+	}
+
+	// So now I have a client that can resolve ip addr to its source hardware addr -> mac addr
 }
