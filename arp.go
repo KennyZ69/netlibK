@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"net/netip"
 )
@@ -41,7 +43,60 @@ func BuildARPPacket(op Operation, sourceIp, targetIp netip.Addr, sourceMac, dest
 
 func (p *ARPPacket) Marshal() ([]byte, error)
 
-func (p *ARPPacket) Unmarshal([]byte) error
+// Unmarshal a byte slice into arp packet struct
+func (p *ARPPacket) Unmarshal(b []byte) error {
+	if len(b) < 8 {
+		return io.ErrUnexpectedEOF
+	}
+
+	p.HardwareType = binary.BigEndian.Uint16(b[0:2])
+	p.ProtocolType = binary.BigEndian.Uint16(b[2:4])
+
+	p.HardwareAddrLength = b[4]
+	p.ProtocolLength = b[5]
+
+	p.Operation = Operation(binary.BigEndian.Uint16(b[6:8]))
+
+	n := 8
+
+	// get the lengths times two because there is the sender and destination fields
+	hlen := int(p.HardwareAddrLength)
+	hlen2 := hlen * 2
+	plen := int(p.ProtocolLength)
+	plen2 := plen * 2
+
+	arplen := n + plen + hlen
+	if len(b) < arplen {
+		return io.ErrUnexpectedEOF
+	}
+
+	bb := make([]byte, arplen-n)
+
+	copy(bb[0:hlen], b[n:n+hlen])
+	p.SenderHardwareAddr = bb[0:hlen]
+	n += hlen
+
+	copy(bb[hlen:hlen+plen], b[n:n+plen])
+	senderIp, ok := netip.AddrFromSlice(bb[hlen : hlen+plen])
+	if !ok {
+		return fmt.Errorf("Invalid sender ip addr")
+	}
+	p.SenderIp = senderIp
+	n += plen
+
+	copy(bb[hlen+plen:hlen2+plen], b[n:n+plen])
+	p.TargetHardwareAddr = bb[hlen+plen : hlen2+plen]
+	n += plen
+
+	copy(bb[hlen2+plen:hlen2+plen2], b[n:n+plen])
+	targetIP, ok := netip.AddrFromSlice(bb[hlen2+plen : hlen2+plen2])
+	if !ok {
+		return fmt.Errorf("Invalid target ip addr")
+	}
+	p.TargetIp = targetIP
+
+	return nil
+}
 
 func parsePacket(b []byte) (*ARPPacket, *EthernetHeader, error) {
 	fr := new(EthernetHeader)

@@ -116,5 +116,6 @@ func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
 			return nil, nil, err
 		}
 
+		p, _, err := parsePacket(buf)
 	}
 }
