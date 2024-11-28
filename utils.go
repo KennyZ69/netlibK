@@ -19,6 +19,7 @@ type EthernetHeader struct {
 	// source hardware address for the frame (ethernet)
 	SourceAddr net.HardwareAddr // 6 bytes, transmitted as-is
 	EtherType  EtherType
+	Payload    []byte
 }
 
 type Frame interface {
@@ -67,3 +68,19 @@ const (
 	OperationRequest Operation = 1
 	OperationReply   Operation = 2
 )
+
+type Address struct {
+	HardwareAddr net.HardwareAddr
+}
+
+// this is now missing network and string method to implement the net.Addr inteface
+var _ net.Addr = &Address{}
+
+// return the network name for the address
+func (adr *Address) Network() string {
+	return "network"
+}
+
+func (adr *Address) String() string {
+	return adr.HardwareAddr.String()
+}

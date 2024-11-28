@@ -37,4 +37,5 @@ func main() {
 	}
 
 	// So now I have a client that can resolve ip addr to its source hardware addr -> mac addr
+	// or so I am working on the resolving and retrieving
 }

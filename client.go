@@ -82,11 +82,6 @@ func (c *Client) HardwareAddr() net.HardwareAddr {
 	return c.Iface.HardwareAddr
 }
 
-type Address struct {
-	HardwareAddr net.HardwareAddr
-}
-
-// I am thinking I could do this with generics because I need to use it with arp and icmp too
 func (c *Client) Write(p *ARPPacket, addr net.HardwareAddr) error {
 	//
 	payload, err := p.Marshal()
@@ -94,31 +89,32 @@ func (c *Client) Write(p *ARPPacket, addr net.HardwareAddr) error {
 		return err
 	}
 
-	st := &struct {
-		DestMac      net.HardwareAddr
-		SourceMac    net.HardwareAddr
-		EthernetType EtherType
-		Payload      []byte
-	}{
-		DestMac:      addr,
-		SourceMac:    c.SourceHardwareAddr,
-		EthernetType: ARP_PROTOCOL,
-		Payload:      payload,
+	et := &EthernetHeader{
+		DestAddr:   addr,
+		SourceAddr: c.SourceHardwareAddr,
+		EtherType:  ARP_PROTOCOL,
+		Payload:    payload,
 	}
 
 	// I guess I need to implement reading the data from the struct into bytes
-	b, blen, err := read(st)
+	b, err := et.Marshal()
+	if err != nil {
+		return err
+	}
 
 	// because I want to write the payload to the address I need to first make the payload by marshalling
-	_, err = c.Conn.WriteTo(stBin, &Address{HardwareAddr: addr})
+	_, err = c.Conn.WriteTo(b, &Address{HardwareAddr: addr})
 	return err
 }
 
-func read[st struct {
-	DestMac      net.HardwareAddr
-	SourceMac    net.HardwareAddr
-	EthernetType EtherType
-	Payload      []byte
-}](*st) ([]byte, int, error) {
+// receive and read an arp packet and return it with its ethernet header
+func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
+	buf := make([]byte, 128)
+	for {
+		n, _, err := c.Conn.ReadFrom(buf)
+		if err != nil {
+			return nil, nil, err
+		}
 
+	}
 }
