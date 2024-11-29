@@ -127,3 +127,24 @@ func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
 		return p, eth, nil
 	}
 }
+
+func (c *Client) ResolveMAC(targetIp netip.Addr) (net.HardwareAddr, error) {
+	err := c.ARPRequest(targetIp)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		arp, _, err := c.ReceiveARP()
+		if err != nil {
+			return nil, err
+		}
+
+		// getting the reply because this should resolve a reply to the sent request and resolve the reply sender mac
+		if arp.Operation != OperationReply || arp.SenderIp != targetIp {
+			continue
+		}
+
+		return arp.SenderHardwareAddr, nil
+	}
+}
