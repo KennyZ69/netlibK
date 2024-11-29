@@ -1,9 +1,8 @@
-package main
+package netlibk
 
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"net"
 )

@@ -1,4 +1,4 @@
-package main
+package netlibk
 
 import (
 	"fmt"
@@ -83,7 +83,6 @@ func (c *Client) HardwareAddr() net.HardwareAddr {
 }
 
 func (c *Client) Write(p *ARPPacket, addr net.HardwareAddr) error {
-	//
 	payload, err := p.Marshal()
 	if err != nil {
 		return err
@@ -116,6 +115,15 @@ func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
 			return nil, nil, err
 		}
 
-		p, _, err := parsePacket(buf)
+		// parsing just to the length read from
+		p, eth, err := parsePacket(buf[:n])
+		if err != nil {
+			// if the packet is just invalid, continue
+			if err == fmt.Errorf("Invalid ARP packet") {
+				continue
+			}
+			return nil, nil, err
+		}
+		return p, eth, nil
 	}
 }

@@ -1,4 +1,4 @@
-package main
+package netlibk
 
 import "net/netip"
 

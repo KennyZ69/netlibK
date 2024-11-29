@@ -1,4 +1,4 @@
-package main
+package netlibk
 
 func (icmp *ICMPPacket) checksum(data []byte) {
 	var sum uint32
