@@ -3,15 +3,21 @@ package netlibk
 import (
 	"net"
 	"net/netip"
+	"syscall"
 )
 
 type EtherType uint16
+type Type int
 
 const (
 	// possible ethernet types
-	ARP_PROTOCOL  EtherType = 0x806
-	IPv4_PROTOCOL EtherType = 0x800
-	IPv6_PROTOCOL EtherType = 0x86DD
+	ARP_PROTOCOL  EtherType = 0x0806
+	IPv4_PROTOCOL EtherType = 0x0800
+	IPv6_PROTOCOL EtherType = 0x086DD
+
+	_ Type = iota
+	SockRaw
+	SockDatagram
 )
 
 type EthernetHeader struct {
@@ -84,3 +90,19 @@ func (adr *Address) Network() string {
 func (adr *Address) String() string {
 	return adr.HardwareAddr.String()
 }
+
+func (rc *RawConn) Close() error {
+	return syscall.Close(rc.fd)
+}
+
+func (rc *RawConn) ReadFrom(b []byte) (int, error) {
+	n, _, err := syscall.Recvfrom(rc.fd, b, 0)
+	return n, err
+}
+
+func (rc *RawConn) WriteTo(b []byte, addr net.Addr) (int, error) {
+	n, err := syscall.Write(rc.fd, b)
+	return n, err
+}
+
+func (rc *RawConn) LocalAddr() net.Addr

@@ -3,9 +3,22 @@ package netlibk
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
+	"sync"
+	"syscall"
+	"time"
 )
+
+// a custom implementation of net.PacketConn
+type RawConn struct {
+	fd            int
+	localAddr     net.Addr
+	mu            sync.Mutex // to protect deadlines
+	readDeadline  time.Time
+	writeDeadline time.Time
+}
 
 // Broadcast is a hardware address of a frame that should be sent to every device on given subnet
 var EthernetBroadcast = net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
@@ -80,3 +93,79 @@ func (et *EthernetHeader) read(b []byte) (int, error) {
 	copy(b[n+2:], et.Payload)
 	return len(b), nil
 }
+
+// func Listen(ifi *net.Interface, socketType Type, protocol int) (net.PacketConn, error) {
+func Listen(ifi *net.Interface, socketType Type, protocol int) (*RawConn, error) {
+	// fmt.Printf("Protocol: 0x%04x, SocketType: %d\n", protocol, socketType)
+
+	// create socket
+	fd, err := syscall.Socket(syscall.AF_PACKET, int(socketType), int(htons(uint16(protocol))))
+	if err != nil {
+		syscall.Close(fd)
+		return nil, fmt.Errorf("failed to create socket: %v\n", err)
+	}
+
+	// bind the socket
+	sa := &syscall.SockaddrLinklayer{
+		Protocol: htons(uint16(protocol)),
+		Ifindex:  ifi.Index,
+	}
+	fmt.Println("Binding the socket to the filedescriptor")
+	err = syscall.Bind(fd, sa)
+	if err != nil {
+		syscall.Close(fd)
+		return nil, fmt.Errorf("Error failed to bind socket: %v\n", err)
+	}
+
+	// // convert the socket into net.packetconn
+	// f := os.NewFile(uintptr(fd), fmt.Sprintf("fd %v", fd))
+	// fmt.Println("Got the os.File for the socket to convert into packetconn")
+	// conn, err := net.FilePacketConn(f)
+	// f.Close()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Error failed to create packet connection in Listen func: %v\n", err)
+	// }
+	// fmt.Println("Converted socket into packetconn successfully")
+
+	// return conn, nil
+
+	// missed error check
+	addrs, _ := ifi.Addrs()
+	// if err != nil {
+	// }
+
+	// missed error check
+	addr, _ := getIPv4Addr(addrs)
+	s := addr.AsSlice()
+
+	return &RawConn{
+		fd: fd,
+		// localAddr: &net.IPAddr{
+		// IP: net.IPv4zero,
+		// },
+		localAddr: &net.IPAddr{
+			IP: net.IP(s),
+		},
+	}, nil
+}
+
+// htons converts a 16-bit value to big-endian
+func htons(val uint16) uint16 {
+	return (val<<8)&0xff00 | (val>>8)&0x00ff
+}
+
+var _ net.PacketConn = &RawConn{}
+
+// listen func for linux system
+//	func listen(ifi *net.Interface, socketType Type, protocol int) (*net.PacketConn, error) {
+//		var sockt int
+//		switch socketType {
+//		case SockRaw:
+//			sockt = unix.SOCK_RAW
+//		case SockDatagram:
+//			sockt = unix.SOCK_DGRAM
+//		default:
+//			return nil, fmt.Errorf("Invalid packet type val")
+//		}
+//	}
+//
