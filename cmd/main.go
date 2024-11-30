@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/netip"
@@ -26,22 +25,18 @@ func main() {
 	flag.Parse()
 
 	// validate the network interface
-	fmt.Println("Getting the net interface")
 	ifi, err := net.InterfaceByName(*ifiFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// fmt.Println(ifi)
 
 	// TODO: set the client for icmp and arp requests
 
-	fmt.Println("Setting up the client")
 	c, err := netlibk.SetClient(ifi)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer c.Close()
-	fmt.Println("Client running")
 
 	if err = c.Conn.SetDeadline(time.Now().Add(*timeFlag)); err != nil {
 		log.Fatal(err)
@@ -50,13 +45,11 @@ func main() {
 	// So now I have a client that can resolve ip addr to its source hardware addr -> mac addr
 	// or so I am working on the resolving and retrieving
 
-	fmt.Println("Parsing the ip address provided")
 	ip, err := netip.ParseAddr(*ipFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Resolving the mac address to the given ip")
 	mac, err := c.ResolveMAC(ip)
 	if err != nil {
 		log.Fatal(err)
