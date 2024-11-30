@@ -51,6 +51,7 @@ func (et *EthernetHeader) length() int {
 
 // allocate a byte slice into the eth header / frame and make it to binary implementing the read func
 func (et *EthernetHeader) Marshal() ([]byte, error) {
+	// fmt.Printf("Length of the frame: %v\n", et.length())
 	b := make([]byte, et.length())
 	_, err := et.read(b)
 	return b, err
@@ -90,6 +91,7 @@ func (et *EthernetHeader) read(b []byte) (int, error) {
 	// for now I do not care about VLAN I guess I do not need it for goapt
 
 	binary.BigEndian.PutUint16(b[n:n+2], uint16(et.EtherType))
+	// fmt.Printf("Copying payload: %v\n", et.Payload)
 	copy(b[n+2:], et.Payload)
 	return len(b), nil
 }
@@ -153,8 +155,6 @@ func Listen(ifi *net.Interface, socketType Type, protocol int) (*RawConn, error)
 func htons(val uint16) uint16 {
 	return (val<<8)&0xff00 | (val>>8)&0x00ff
 }
-
-var _ net.PacketConn = &RawConn{}
 
 // listen func for linux system
 //	func listen(ifi *net.Interface, socketType Type, protocol int) (*net.PacketConn, error) {

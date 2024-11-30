@@ -104,10 +104,10 @@ func (c *Client) Write(p *ARPPacket, addr net.HardwareAddr) error {
 	}
 
 	et := &EthernetHeader{
-		DestAddr:   addr,
-		SourceAddr: c.SourceHardwareAddr,
-		EtherType:  ARP_PROTOCOL,
-		Payload:    payload,
+		DestAddr:   addr,                 // 6 bytes
+		SourceAddr: c.SourceHardwareAddr, // 6 bytes
+		EtherType:  ARP_PROTOCOL,         // 2 bytes
+		Payload:    payload,              // N bytes
 	}
 
 	// I guess I need to implement reading the data from the struct into bytes
@@ -129,7 +129,9 @@ func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
 		if err != nil {
 			return nil, nil, err
 		}
+		fmt.Println("Read from the connection")
 
+		fmt.Println("Parsing packet")
 		// parsing just to the length read from
 		p, eth, err := parsePacket(buf[:n])
 		if err != nil {
@@ -139,6 +141,7 @@ func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
 			}
 			return nil, nil, err
 		}
+		fmt.Println("Parsed the packet")
 		return p, eth, nil
 	}
 }
@@ -148,15 +151,20 @@ func (c *Client) ResolveMAC(targetIp netip.Addr) (net.HardwareAddr, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Sent the request")
 
+	// wait and get the replies
 	for {
+		fmt.Println("Receiving the reply")
 		arp, _, err := c.ReceiveARP()
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("Reply received")
 
-		// getting the reply because this should resolve a reply to the sent request and resolve the reply sender mac
-		if arp.Operation != OperationReply || arp.SenderIp != targetIp {
+		fmt.Printf("Sender ip: %v; Target ip: %v\nOp: %v\n", arp.SenderIp, targetIp, arp.Operation)
+		// if arp.Operation != OperationReply || arp.SenderIp != targetIp {
+		if arp.SenderIp != targetIp {
 			continue
 		}
 

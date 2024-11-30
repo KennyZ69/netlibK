@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/netip"
 	"syscall"
+	"time"
 )
 
 type EtherType uint16
@@ -91,18 +92,58 @@ func (adr *Address) String() string {
 	return adr.HardwareAddr.String()
 }
 
+var _ net.PacketConn = &RawConn{}
+
 func (rc *RawConn) Close() error {
 	return syscall.Close(rc.fd)
 }
 
-func (rc *RawConn) ReadFrom(b []byte) (int, error) {
-	n, _, err := syscall.Recvfrom(rc.fd, b, 0)
-	return n, err
+func (rc *RawConn) LocalAddr() net.Addr {
+	return rc.localAddr
 }
 
+// read a packet from connection
+func (rc *RawConn) ReadFrom(b []byte) (int, net.Addr, error) {
+	n, _, err := syscall.Recvfrom(rc.fd, b, 0)
+	if err != nil {
+		return 0, nil, err
+	}
+	return n, rc.localAddr, err
+}
+
+// send a packet through the raw connection
 func (rc *RawConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 	n, err := syscall.Write(rc.fd, b)
-	return n, err
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
 }
 
-func (rc *RawConn) LocalAddr() net.Addr
+func (rc *RawConn) SetDeadline(t time.Time) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	rc.readDeadline = t
+	rc.writeDeadline = t
+	return nil
+}
+
+func (rc *RawConn) SetReadDeadline(t time.Time) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	rc.readDeadline = t
+	return nil
+
+}
+
+func (rc *RawConn) SetWriteDeadline(t time.Time) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	rc.writeDeadline = t
+	return nil
+
+}
