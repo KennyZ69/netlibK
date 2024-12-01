@@ -10,7 +10,7 @@ import (
 
 func (c *Client) ARPRequest(ip netip.Addr) error {
 	if !c.SourceIp.IsValid() {
-		return fmt.Errorf("Error invalid ip address of a client\n")
+		return ErrInvalidClient
 	}
 
 	arp, err := BuildARPPacket(OperationRequest, c.SourceIp, ip, c.SourceHardwareAddr, EthernetBroadcast)
@@ -185,4 +185,29 @@ func parsePacket(b []byte) (*ARPPacket, *EthernetHeader, error) {
 	fmt.Println("Unmarshalled the packet")
 
 	return p, fr, nil
+}
+
+// receive and read an arp packet and return it with its ethernet header
+func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
+	buf := make([]byte, 128)
+	for {
+		n, _, err := c.Conn.ReadFrom(buf)
+		if err != nil {
+			return nil, nil, err
+		}
+		fmt.Println("Read from the connection")
+
+		fmt.Println("Parsing packet")
+		// parsing just to the length read from
+		p, eth, err := parsePacket(buf[:n])
+		if err != nil {
+			// if the packet is just invalid, continue
+			if err == fmt.Errorf("Invalid ARP packet") {
+				continue
+			}
+			return nil, nil, err
+		}
+		fmt.Println("Parsed the packet")
+		return p, eth, nil
+	}
 }

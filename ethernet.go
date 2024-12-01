@@ -112,7 +112,6 @@ func Listen(ifi *net.Interface, socketType Type, protocol int) (*RawConn, error)
 		Protocol: htons(uint16(protocol)),
 		Ifindex:  ifi.Index,
 	}
-	fmt.Println("Binding the socket to the filedescriptor")
 	err = syscall.Bind(fd, sa)
 	if err != nil {
 		syscall.Close(fd)

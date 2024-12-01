@@ -32,7 +32,7 @@ func main() {
 
 	// TODO: set the client for icmp and arp requests
 
-	c, err := netlibk.SetClient(ifi)
+	c, err := netlibk.ARPSetClient(ifi)
 	if err != nil {
 		log.Fatal(err)
 	}

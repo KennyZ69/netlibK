@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"os"
 	"syscall"
 )
 
@@ -14,9 +15,30 @@ type Client struct {
 	SourceHardwareAddr net.HardwareAddr
 	EthernetHeader     *EthernetHeader
 	IPv4Header         *IPv4Header
+
+	ICMP_ID    uint16
+	ICMPSeqNum uint16
 }
 
-func SetClient(ifi *net.Interface) (*Client, error) {
+func ICMPSetClientWhenInvalid(ifi *net.Interface, ip netip.Addr) (*Client, error) {
+	conn, err := net.ListenPacket("ip4:icmp", ip.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return New(ifi, conn)
+}
+
+func ICMPSetClient(ifi *net.Interface) (*Client, error) {
+	conn, err := Listen(ifi, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening connection for the net interface: %v\n", err)
+	}
+	return New(ifi, conn)
+
+}
+
+func ARPSetClient(ifi *net.Interface) (*Client, error) {
 	// for now using the "ethernet" but I want to have something for non ethernet also
 	// I found that it probably won't work through wifi
 	// conn, err := net.ListenPacket("ethernet", ifi.Name)
@@ -67,6 +89,10 @@ func newClient(ifi *net.Interface, conn net.PacketConn, addrs []net.Addr) (*Clie
 		Conn:               conn,
 		SourceIp:           ip,
 		SourceHardwareAddr: sourceMac,
+
+		// unique id based on process id
+		ICMP_ID:    uint16(os.Getpid() & 0xffff),
+		ICMPSeqNum: 1,
 	}, nil
 }
 
@@ -119,31 +145,6 @@ func (c *Client) Write(p *ARPPacket, addr net.HardwareAddr) error {
 	// because I want to write the payload to the address I need to first make the payload by marshalling
 	_, err = c.Conn.WriteTo(b, &Address{HardwareAddr: addr})
 	return err
-}
-
-// receive and read an arp packet and return it with its ethernet header
-func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
-	buf := make([]byte, 128)
-	for {
-		n, _, err := c.Conn.ReadFrom(buf)
-		if err != nil {
-			return nil, nil, err
-		}
-		fmt.Println("Read from the connection")
-
-		fmt.Println("Parsing packet")
-		// parsing just to the length read from
-		p, eth, err := parsePacket(buf[:n])
-		if err != nil {
-			// if the packet is just invalid, continue
-			if err == fmt.Errorf("Invalid ARP packet") {
-				continue
-			}
-			return nil, nil, err
-		}
-		fmt.Println("Parsed the packet")
-		return p, eth, nil
-	}
 }
 
 func (c *Client) ResolveMAC(targetIp netip.Addr) (net.HardwareAddr, error) {

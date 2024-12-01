@@ -1,6 +1,7 @@
 package netlibk
 
 import (
+	"errors"
 	"net"
 	"net/netip"
 	"syscall"
@@ -11,6 +12,7 @@ type EtherType uint16
 type Type int
 
 const (
+
 	// possible ethernet types
 	ARP_PROTOCOL  EtherType = 0x0806
 	IPv4_PROTOCOL EtherType = 0x0800
@@ -19,6 +21,11 @@ const (
 	_ Type = iota
 	SockRaw
 	SockDatagram
+)
+
+var (
+	// Errors
+	ErrInvalidClient = errors.New("Error invalid client source ip address")
 )
 
 type EthernetHeader struct {
@@ -48,12 +55,12 @@ type IPv4Header struct {
 }
 
 type ICMPPacket struct {
-	Type     uint8
-	Code     uint8
-	Checksum uint16
-	Id       uint16
-	Seq      uint16
-	Payload  []byte
+	Type     uint8  // 1 byte
+	Code     uint8  // 1 byte
+	Checksum uint16 // 2 bytes
+	Id       uint16 // 2 bytes
+	Seq      uint16 // 2 bytes
+	Payload  []byte // N bytes
 }
 
 type ARPPacket struct {
@@ -78,6 +85,7 @@ const (
 
 type Address struct {
 	HardwareAddr net.HardwareAddr
+	IpAddr       netip.Addr
 }
 
 // this is now missing network and string method to implement the net.Addr inteface
