@@ -26,6 +26,7 @@ const (
 var (
 	// Errors
 	ErrInvalidClient = errors.New("Error invalid client source ip address")
+	ErrInvalidIP     = errors.New("Error invalid ip address given")
 )
 
 type EthernetHeader struct {

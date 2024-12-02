@@ -1,14 +1,120 @@
 package netlibk
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
 	"net/netip"
+	"os"
 	"time"
 )
 
+// ping for when the base Ping function does not work (this is not working with raw sockets, but the standard library)
+// or when you don't want to use client, so you want a higher level imolementation
+func HigherLvlPing(dest netip.Addr, payload []byte, timeout time.Duration) (time.Duration, bool, error) {
+	var seqN, icmp_id uint16 = 1, uint16(os.Getpid() & 0xffff)
+	if !dest.IsValid() {
+		return 0, false, ErrInvalidIP
+	}
+	// c, err := net.Dial("ip4:icmp", dest.String())
+	c, err := net.Dial("ip4:icmp", "192.168.104.229")
+	if err != nil {
+		return 0, false, fmt.Errorf("Error could not connect to ListenPacket: %v\n", err)
+	}
+	defer c.Close()
+
+	icmp, err := BuildICMPPacket(seqN, icmp_id, payload)
+	if err != nil {
+		return 0, false, err
+	}
+	icmp.checksum(payload)
+	seqN++
+
+	fmt.Printf("Sending to %s: id=%v; seqn=%v\n", dest.String(), icmp.Id, icmp.Seq)
+
+	// p, err := icmp.Marshal()
+	// if err != nil {
+	// 	return 0, false, err
+	// }
+	//
+	// start := time.Now()
+	// _, err = c.Write(p)
+	// if err != nil {
+	// 	return 0, false, err
+	// }
+	//
+	// reply := make([]byte, 1024)
+	// if err = c.SetDeadline(time.Now().Add(timeout)); err != nil {
+	// 	return 0, false, fmt.Errorf("Error setting deadline on net.Conn: %v\n", err)
+	// }
+	//
+	// n, err := c.Read(reply)
+	// if err != nil {
+	// 	return 0, false, fmt.Errorf("Error reading the reply from connection: %v\n", err)
+	// }
+	//
+	// duration := time.Since(start)
+	//
+	// if n < 28 { // 20 + 8 bytes as the minimum length for ipv4 header + icmp packet
+	// 	return 0, false, fmt.Errorf("Error invalid ICMP reply length")
+	// }
+	//
+	// replyId := binary.BigEndian.Uint16(reply[24:26])
+	// replySeq := binary.BigEndian.Uint16(reply[26:28])
+	// if replyId != icmp.Id || replySeq != icmp.Seq {
+	// 	return 0, false, fmt.Errorf("Error mismatched ICMP reply ID or Seq number")
+	// }
+
+	packet := new(bytes.Buffer)
+	binary.Write(packet, binary.BigEndian, icmp)
+	// payload = []byte("Incoming ping...")
+	packet.Write(payload)
+	// icmpPacket.Checksum = getChecksum(packet.Bytes())
+	// set the checksum of the packet
+	// icmpPacket.checksum(packet.Bytes())
+
+	packet.Reset()
+
+	binary.Write(packet, binary.BigEndian, icmp)
+	packet.Write(payload)
+
+	// send the icmp
+	start := time.Now()
+	pl, err := c.Write(packet.Bytes())
+	if err != nil {
+		return 0, false, fmt.Errorf("Error sending icmp packet: %v\n", err)
+	}
+	fmt.Printf("Length of packet written: %v\n", pl)
+
+	// handle the reply
+	reply := make([]byte, 1024)
+	c.SetReadDeadline(time.Now().Add(timeout))
+	n, err := c.Read(reply)
+	if err != nil {
+		return 0, false, fmt.Errorf("Error handling the icmp reply: %v\n", err)
+	}
+	fmt.Printf("Length of reply: %v\n", n)
+
+	duration := time.Since(start)
+
+	if n < 28 { // 20 + 8 as the minimum length for ipv4 header + icmp header
+		return 0, false, fmt.Errorf("Error invalid ICMP reply lenght")
+	}
+
+	replyId := binary.BigEndian.Uint16(reply[23:25])
+	replySeq := binary.BigEndian.Uint16(reply[25:27])
+	// replyPayload := binary.BigEndian.Uint16(reply[28:])
+	fmt.Printf("replyId=%v; replySeq=%v\n", replyId, replySeq)
+	if replyId != icmp.Id || replySeq != icmp.Seq {
+		return 0, false, fmt.Errorf("Error mismatched ICMP reply ID or Seq number")
+	}
+
+	return duration, true, nil
+}
+
+// ping the desired destination ip with payload and return the response time, active boolean and error
 func (c *Client) Ping(dest netip.Addr, payload []byte) (time.Duration, bool, error) {
 	err := c.SendICMP(dest, payload)
 	if err != nil {

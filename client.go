@@ -20,14 +20,14 @@ type Client struct {
 	ICMPSeqNum uint16
 }
 
-func ICMPSetClientWhenInvalid(ifi *net.Interface, ip netip.Addr) (*Client, error) {
-	conn, err := net.ListenPacket("ip4:icmp", ip.String())
-	if err != nil {
-		return nil, err
-	}
-
-	return New(ifi, conn)
-}
+// func ICMPSetClientWhenInvalid(ifi *net.Interface, ip netip.Addr) (*Client, error) {
+// 	conn, err := net.ListenPacket("ip4:icmp", ip.String())
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return New(ifi, conn)
+// }
 
 func ICMPSetClient(ifi *net.Interface) (*Client, error) {
 	conn, err := Listen(ifi, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)

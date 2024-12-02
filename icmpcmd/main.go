@@ -28,6 +28,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	dur, active, err := netlibk.HigherLvlPing(ip, []byte("Hello world!"), *timeFlag)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Ping to %s: %v: %v\n", ip, active, dur)
+
 	ifi, err := net.InterfaceByName(*ifiFlag)
 	if err != nil {
 		log.Fatal(err)
