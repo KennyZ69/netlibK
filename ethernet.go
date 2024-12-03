@@ -99,9 +99,18 @@ func (et *EthernetHeader) read(b []byte) (int, error) {
 // func Listen(ifi *net.Interface, socketType Type, protocol int) (net.PacketConn, error) {
 func Listen(ifi *net.Interface, socketType Type, protocol int) (*RawConn, error) {
 	// fmt.Printf("Protocol: 0x%04x, SocketType: %d\n", protocol, socketType)
+	var fd int
+	var err error
 
 	// create socket
-	fd, err := syscall.Socket(syscall.AF_PACKET, int(socketType), int(htons(uint16(protocol))))
+
+	// switch protocol {
+	// case syscall.IPPROTO_ICMP:
+	// 	fd, err = syscall.Socket(syscall.AF_INET, int(socketType), int(htons(uint16(protocol))))
+	// case int(ARP_PROTOCOL):
+	// 	fd, err = syscall.Socket(syscall.AF_PACKET, int(socketType), int(htons(uint16(protocol))))
+	// }
+	fd, err = syscall.Socket(syscall.AF_PACKET, int(socketType), int(htons(uint16(protocol))))
 	if err != nil {
 		syscall.Close(fd)
 		return nil, fmt.Errorf("failed to create socket: %v\n", err)

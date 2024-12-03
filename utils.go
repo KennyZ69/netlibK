@@ -44,15 +44,21 @@ type Frame interface {
 }
 
 type IPv4Header struct {
-	HeaderLen uint8
-	TotalLen  uint16
-	SourceIp  netip.Addr
-	DestIp    netip.Addr
-	Checksum  uint16
-	Protocol  uint8
-	TTL       uint8
-	Id        uint16
-	Flags     uint16
+	Version        uint8  // in Version also the IHL (HeaderLen) can be done (4 bits + 4 bits)
+	HeaderLen      uint8  // IHL
+	Service        uint8  // DSCP/ECN
+	TotalLen       uint16 // total packet length (65535 bytes = max)
+	Id             uint16
+	Flags          uint16
+	FragmentOffset uint16 // fragmentation info (could come together with flags)
+	TTL            uint8  // time to live
+	Protocol       uint8
+	Checksum       uint16
+	// SourceIp       netip.Addr
+	// DestIp         netip.Addr
+	SourceIp [4]byte
+	DestIp   [4]byte
+	// Options        uint32
 }
 
 type ICMPPacket struct {
@@ -155,4 +161,23 @@ func (rc *RawConn) SetWriteDeadline(t time.Time) error {
 	rc.writeDeadline = t
 	return nil
 
+}
+
+func checksum(data []byte) uint16 {
+	var sum uint32
+
+	// converting, shifting the bits and the "|" is a bitwise OR to combine those two 8-bit values into one 16 bit val
+	for i := 0; i < len(data)-1; i += 2 {
+		sum += uint32(data[i])<<8 | uint32(data[i+1])
+	}
+	if len(data)%2 == 1 {
+		sum += uint32(data[len(data)-1]) << 8
+	}
+	// ensuring no overflown bits remain there, extracting them and adding them to the lower 16 bits
+	sum = (sum >> 16) + (sum & 0xffff)
+	sum += (sum >> 16)
+
+	// one's complement -> inverts all bits so 0 to 1 and 1 to 0
+	return uint16(^sum)
+	// return uint16(^sum)
 }

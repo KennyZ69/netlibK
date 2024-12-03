@@ -30,7 +30,8 @@ type Client struct {
 // }
 
 func ICMPSetClient(ifi *net.Interface) (*Client, error) {
-	conn, err := Listen(ifi, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
+	// conn, err := Listen(ifi, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
+	conn, err := Listen(ifi, syscall.SOCK_RAW, int(IPv4_PROTOCOL))
 	if err != nil {
 		return nil, fmt.Errorf("Error opening connection for the net interface: %v\n", err)
 	}
