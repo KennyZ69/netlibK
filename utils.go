@@ -3,7 +3,6 @@ package netlibk
 import (
 	"errors"
 	"net"
-	"net/netip"
 	"syscall"
 	"time"
 )
@@ -70,6 +69,16 @@ type ICMPPacket struct {
 	Payload  []byte // N bytes
 }
 
+// this is just for the higher level ping function because I cannot have the payload on there
+type ICMP struct {
+	Type     uint8  // 1 byte
+	Code     uint8  // 1 byte
+	Checksum uint16 // 2 bytes
+	Id       uint16 // 2 bytes
+	Seq      uint16 // 2 bytes
+
+}
+
 type ARPPacket struct {
 	HardwareType       uint16    // 2 bytes
 	ProtocolType       uint16    // 2 bytes
@@ -77,9 +86,9 @@ type ARPPacket struct {
 	ProtocolLength     uint8     // 1 byte
 	Operation          Operation // 2 bytes
 	SenderHardwareAddr net.HardwareAddr
-	SenderIp           netip.Addr
+	SenderIp           net.IP
 	TargetHardwareAddr net.HardwareAddr
-	TargetIp           netip.Addr
+	TargetIp           net.IP
 }
 
 // just to specify the operation as either reply or request
@@ -92,7 +101,7 @@ const (
 
 type Address struct {
 	HardwareAddr net.HardwareAddr
-	IpAddr       netip.Addr
+	// IpAddr       netip.Addr
 }
 
 // this is now missing network and string method to implement the net.Addr inteface

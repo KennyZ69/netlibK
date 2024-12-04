@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/netip"
 )
 
-func (c *Client) ARPRequest(ip netip.Addr) error {
-	if !c.SourceIp.IsValid() {
+func (c *Client) ARPRequest(ip net.IP) error {
+	if c.SourceIp == nil {
 		return ErrInvalidClient
 	}
 
@@ -26,7 +25,7 @@ func (c *Client) ARPRequest(ip netip.Addr) error {
 	return c.Write(arp, EthernetBroadcast)
 }
 
-func BuildARPPacket(op Operation, sourceIp, targetIp netip.Addr, sourceMac, destMac net.HardwareAddr) (*ARPPacket, error) {
+func BuildARPPacket(op Operation, sourceIp, targetIp net.IP, sourceMac, destMac net.HardwareAddr) (*ARPPacket, error) {
 
 	return &ARPPacket{
 		HardwareType: 1,                     // default to 1 -> ethernet
@@ -72,7 +71,7 @@ func (p *ARPPacket) Marshal() ([]byte, error) {
 	copy(b[n:n+hlen], p.SenderHardwareAddr)
 	n += hlen
 
-	senderIp := p.SenderIp.As4()
+	senderIp := p.SenderIp.To4()
 	// 8 + hardware length to the same + protocol length
 	copy(b[n:n+plen], senderIp[:])
 	fmt.Printf("Sender ip: %v\n", senderIp)
@@ -81,7 +80,7 @@ func (p *ARPPacket) Marshal() ([]byte, error) {
 	copy(b[n:n+hlen], p.TargetHardwareAddr)
 	n += hlen
 
-	targetIp := p.TargetIp.As4()
+	targetIp := p.TargetIp.To4()
 	copy(b[n:n+plen], targetIp[:])
 	fmt.Printf("Target ip: %v\n", targetIp)
 
@@ -140,14 +139,10 @@ func (p *ARPPacket) Unmarshal(b []byte) error {
 	// sender ip
 	copy(bb[hlen:hlen+plen], b[n:n+plen])
 	senderIp := b[n : n+plen]
+
 	fmt.Printf("Sender IP bytes: %x\n", senderIp)
-	ip, ok := netip.AddrFromSlice(senderIp)
-	// senderIp, ok := netip.AddrFromSlice(bb[hlen : hlen+plen])
-	if !ok {
-		return fmt.Errorf("Invalid sender ip addr: %x", senderIp)
-	}
-	// p.SenderIp = senderIp
-	p.SenderIp = ip
+
+	p.SenderIp = net.IP(senderIp)
 	n += plen
 
 	copy(bb[hlen+plen:hlen2+plen], b[n:n+plen])
@@ -155,11 +150,9 @@ func (p *ARPPacket) Unmarshal(b []byte) error {
 	n += plen
 
 	copy(bb[hlen2+plen:hlen2+plen2], b[n:n+plen])
-	targetIP, ok := netip.AddrFromSlice(bb[hlen2+plen : hlen2+plen2])
-	if !ok {
-		return fmt.Errorf("Invalid target ip addr")
-	}
-	p.TargetIp = targetIP
+	tIp := bb[hlen2+plen : hlen2+plen2]
+
+	p.TargetIp = net.IP(tIp)
 
 	return nil
 }

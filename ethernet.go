@@ -91,7 +91,6 @@ func (et *EthernetHeader) read(b []byte) (int, error) {
 	// for now I do not care about VLAN I guess I do not need it for goapt
 
 	binary.BigEndian.PutUint16(b[n:n+2], uint16(et.EtherType))
-	// fmt.Printf("Copying payload: %v\n", et.Payload)
 	copy(b[n+2:], et.Payload)
 	return len(b), nil
 }
@@ -103,13 +102,6 @@ func Listen(ifi *net.Interface, socketType Type, protocol int) (*RawConn, error)
 	var err error
 
 	// create socket
-
-	// switch protocol {
-	// case syscall.IPPROTO_ICMP:
-	// 	fd, err = syscall.Socket(syscall.AF_INET, int(socketType), int(htons(uint16(protocol))))
-	// case int(ARP_PROTOCOL):
-	// 	fd, err = syscall.Socket(syscall.AF_PACKET, int(socketType), int(htons(uint16(protocol))))
-	// }
 	fd, err = syscall.Socket(syscall.AF_PACKET, int(socketType), int(htons(uint16(protocol))))
 	if err != nil {
 		syscall.Close(fd)
@@ -127,32 +119,19 @@ func Listen(ifi *net.Interface, socketType Type, protocol int) (*RawConn, error)
 		return nil, fmt.Errorf("Error failed to bind socket: %v\n", err)
 	}
 
-	// // convert the socket into net.packetconn
-	// f := os.NewFile(uintptr(fd), fmt.Sprintf("fd %v", fd))
-	// fmt.Println("Got the os.File for the socket to convert into packetconn")
-	// conn, err := net.FilePacketConn(f)
-	// f.Close()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("Error failed to create packet connection in Listen func: %v\n", err)
-	// }
-	// fmt.Println("Converted socket into packetconn successfully")
+	addrs, err := ifi.Addrs()
+	if err != nil {
+		return nil, fmt.Errorf("Error getting addresses from net interface: %v\n", err)
+	}
 
-	// return conn, nil
-
-	// missed error check
-	addrs, _ := ifi.Addrs()
-	// if err != nil {
-	// }
-
-	// missed error check
-	addr, _ := getIPv4Addr(addrs)
-	s := addr.AsSlice()
+	ip, err := getIPv4Addr(addrs)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting first IPv4 address: %v\n", err)
+	}
+	s := ip.To4()
 
 	return &RawConn{
 		fd: fd,
-		// localAddr: &net.IPAddr{
-		// IP: net.IPv4zero,
-		// },
 		localAddr: &net.IPAddr{
 			IP: net.IP(s),
 		},

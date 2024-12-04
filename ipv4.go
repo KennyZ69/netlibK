@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math/rand/v2"
-	"net/netip"
+	"net"
 )
 
-func BuildIPv4Header(sourceIp, destIp netip.Addr, protocol uint16, payload []byte) ([]byte, error) {
+func BuildIPv4Header(sourceIp, destIp net.IP, protocol uint16, payload []byte) ([]byte, error) {
 	header := IPv4Header{
 		Version:        0x45, // Version 4 and IHL 5 (20 bytes)
 		Service:        0,    // Default
@@ -19,8 +19,8 @@ func BuildIPv4Header(sourceIp, destIp netip.Addr, protocol uint16, payload []byt
 		// calculate checksum later from buffer
 	}
 
-	copy(header.SourceIp[:], sourceIp.AsSlice())
-	copy(header.DestIp[:], destIp.AsSlice())
+	copy(header.SourceIp[:], sourceIp.To4())
+	copy(header.DestIp[:], destIp.To4())
 
 	// make a byte slice for the header
 	// buf := make([]byte, header.TotalLen)

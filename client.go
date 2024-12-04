@@ -3,7 +3,6 @@ package netlibk
 import (
 	"fmt"
 	"net"
-	"net/netip"
 	"os"
 	"syscall"
 )
@@ -11,7 +10,7 @@ import (
 type Client struct {
 	Iface              *net.Interface
 	Conn               net.PacketConn
-	SourceIp           netip.Addr
+	SourceIp           net.IP
 	SourceHardwareAddr net.HardwareAddr
 	EthernetHeader     *EthernetHeader
 	IPv4Header         *IPv4Header
@@ -53,24 +52,12 @@ func ARPSetClient(ifi *net.Interface) (*Client, error) {
 // create a new client using the network interface and packet connection
 // it would be better to just use the SetClient function
 func New(ifi *net.Interface, conn net.PacketConn) (*Client, error) {
-	// TODO: build the eth and ipv headers and get the client details -> ip and mac addr to assign
-
 	// get the usable IPv4 for the user on his network interface
 	addrs, err := ifi.Addrs()
 	if err != nil {
 		return nil, fmt.Errorf("Error getting the IPv4 address for the user: %v\n", err)
 	}
 
-	// ipAddrs := make([]netip.Addr, len(addrs))
-	// for i, addr := range addrs {
-	// 	ipPrefix, err := netip.ParsePrefix(addr.String())
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("Erorr parsing prefix of an addr: %v\n", err)
-	// 	}
-	// 	ipAddrs[i] = ipPrefix.Addr()
-	// }
-
-	// return newClient(ifi, conn, ipAddrs)
 	return newClient(ifi, conn, addrs)
 }
 
@@ -102,22 +89,26 @@ func (c *Client) Close() error {
 }
 
 // func getIPv4Addr(addrs []netip.Addr) (netip.Addr, error) {
-func getIPv4Addr(addrs []net.Addr) (netip.Addr, error) {
-	ipAddrs := make([]netip.Addr, len(addrs))
 
-	for i, addr := range addrs {
-		ipPrefix, err := netip.ParsePrefix(addr.String())
-		if err != nil {
-			return netip.Addr{}, fmt.Errorf("Erorr parsing prefix of an addr: %v\n", err)
+func getIPv4Addr(addrs []net.Addr) (net.IP, error) {
+	for _, addr := range addrs {
+		fmt.Println("Raw address:", addr.String())
+
+		// check if address is a network address (net.IPNet)
+		if ipNet, ok := addr.(*net.IPNet); ok && ipNet.IP != nil {
+			fmt.Println("Parsed IPNet:", ipNet.IP.String())
+			if ip := ipNet.IP.To4(); ip != nil {
+				return ip, nil
+			}
+		} else if ipAddr, ok := addr.(*net.IPAddr); ok && ipAddr.IP != nil {
+			fmt.Println("Parsed IPAddr:", ipAddr.IP.String())
+			if ip := ipAddr.IP.To4(); ip != nil {
+				return ip, nil
+			}
 		}
-		ipAddrs[i] = ipPrefix.Addr()
 	}
-	for _, addr := range ipAddrs {
-		if addr.Is4() {
-			return addr, nil
-		}
-	}
-	return netip.Addr{}, fmt.Errorf("No valid IPv4 address")
+
+	return nil, fmt.Errorf("No valid IPv4 address")
 }
 
 func (c *Client) HardwareAddr() net.HardwareAddr {
@@ -148,7 +139,7 @@ func (c *Client) Write(p *ARPPacket, addr net.HardwareAddr) error {
 	return err
 }
 
-func (c *Client) ResolveMAC(targetIp netip.Addr) (net.HardwareAddr, error) {
+func (c *Client) ResolveMAC(targetIp net.IP) (net.HardwareAddr, error) {
 	err := c.ARPRequest(targetIp)
 	if err != nil {
 		return nil, err
@@ -165,8 +156,8 @@ func (c *Client) ResolveMAC(targetIp netip.Addr) (net.HardwareAddr, error) {
 		fmt.Println("Reply received")
 
 		fmt.Printf("Sender ip: %v; Target ip: %v\nOp: %v\n", arp.SenderIp, targetIp, arp.Operation)
-		// if arp.Operation != OperationReply || arp.SenderIp != targetIp {
-		if arp.SenderIp != targetIp {
+		if arp.Operation != OperationReply || CompareIPs(arp.SenderIp, targetIp) == 0 {
+			// if arp.SenderIp != targetIp {
 			continue
 		}
 

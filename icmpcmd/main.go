@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/netip"
 	"time"
 
 	netlibk "github.com/KennyZ69/netlibK"
@@ -22,23 +21,27 @@ var (
 )
 
 func main() {
+
 	flag.Parse()
-	ip, err := netip.ParseAddr(*ipFlag)
+
+	ip := net.ParseIP(*ipFlag)
+
+	payload := []byte("Hello world!")
+
+	// testing the higher lvl ping function because the raw ping still is not working
+	dur, active, err := netlibk.HigherLvlPing(ip, payload, *timeFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("Ping to %s: %v: %v\n", ip, active, dur)
 
-	// dur, active, err := netlibk.HigherLvlPing(ip, []byte("Hello world!"), *timeFlag)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Printf("Ping to %s: %v: %v\n", ip, active, dur)
-
+	fmt.Println("Getting net interface")
 	ifi, err := net.InterfaceByName(*ifiFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	fmt.Println("Setting up the icmp client")
 	c, err := netlibk.ICMPSetClient(ifi)
 	// c, err := netlibk.ICMPSetClientWhenInvalid(ifi, ip)
 	if err != nil {
@@ -50,6 +53,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("Pinging ... ")
 	t, active, err := c.Ping(ip, []byte("Hello world!"))
 	if err != nil {
 		log.Fatal(err)

@@ -4,7 +4,6 @@ import (
 	"flag"
 	"log"
 	"net"
-	"net/netip"
 	"time"
 
 	"github.com/KennyZ69/netlibK"
@@ -45,10 +44,7 @@ func main() {
 	// So now I have a client that can resolve ip addr to its source hardware addr -> mac addr
 	// or so I am working on the resolving and retrieving
 
-	ip, err := netip.ParseAddr(*ipFlag)
-	if err != nil {
-		log.Fatal(err)
-	}
+	ip := net.ParseIP(*ipFlag)
 
 	mac, err := c.ResolveMAC(ip)
 	if err != nil {
