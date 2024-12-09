@@ -46,7 +46,7 @@ func main() {
 
 	ip := net.ParseIP(*ipFlag)
 
-	mac, err := c.ResolveMAC(ip)
+	mac, err := c.ResolveMAC(ip, true)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -92,16 +92,16 @@ func (c *Client) Close() error {
 
 func getIPv4Addr(addrs []net.Addr) (net.IP, error) {
 	for _, addr := range addrs {
-		fmt.Println("Raw address:", addr.String())
+		// fmt.Println("Raw address:", addr.String())
 
 		// check if address is a network address (net.IPNet)
 		if ipNet, ok := addr.(*net.IPNet); ok && ipNet.IP != nil {
-			fmt.Println("Parsed IPNet:", ipNet.IP.String())
+			// fmt.Println("Parsed IPNet:", ipNet.IP.String())
 			if ip := ipNet.IP.To4(); ip != nil {
 				return ip, nil
 			}
 		} else if ipAddr, ok := addr.(*net.IPAddr); ok && ipAddr.IP != nil {
-			fmt.Println("Parsed IPAddr:", ipAddr.IP.String())
+			// fmt.Println("Parsed IPAddr:", ipAddr.IP.String())
 			if ip := ipAddr.IP.To4(); ip != nil {
 				return ip, nil
 			}
@@ -139,25 +139,32 @@ func (c *Client) Write(p *ARPPacket, addr net.HardwareAddr) error {
 	return err
 }
 
-func (c *Client) ResolveMAC(targetIp net.IP) (net.HardwareAddr, error) {
+func (c *Client) ResolveMAC(targetIp net.IP, loop bool) (net.HardwareAddr, error) {
 	err := c.ARPRequest(targetIp)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Sent the request")
+	// fmt.Println("Sent the request")
+
+	var count int = 0
 
 	// wait and get the replies
 	for {
-		fmt.Println("Receiving the reply")
+		// stop if I cannot get the right target
+		if count > 9 && loop {
+			return nil, nil
+		}
+		// fmt.Println("Receiving the reply")
 		arp, _, err := c.ReceiveARP()
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("Reply received")
+		// fmt.Println("Reply received")
 
-		fmt.Printf("Sender ip: %v; Target ip: %v\nOp: %v\n", arp.SenderIp, targetIp, arp.Operation)
+		// fmt.Printf("Sender ip: %v; Target ip: %v\nOp: %v\n", arp.SenderIp, targetIp, arp.Operation)
 		if arp.Operation != OperationReply || CompareIPs(arp.SenderIp, targetIp) == 0 {
 			// if arp.SenderIp != targetIp {
+			count++
 			continue
 		}
 

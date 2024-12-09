@@ -17,7 +17,7 @@ func HigherLvlPing(dest net.IP, payload []byte, timeout time.Duration) (time.Dur
 	if dest == nil || dest.To4() == nil {
 		return 0, false, fmt.Errorf("invalid IP address")
 	}
-	fmt.Printf("Connecting to %s\n", dest.String())
+	// fmt.Printf("Connecting to %s\n", dest.String())
 
 	c, err := net.Dial("ip4:icmp", dest.String())
 	if err != nil {
@@ -31,7 +31,7 @@ func HigherLvlPing(dest net.IP, payload []byte, timeout time.Duration) (time.Dur
 		Id:   icmpID,
 		Seq:  seqN,
 	}
-	fmt.Printf("Sending to %s: id=%v; seqn=%v\n", dest.String(), icmp.Id, icmp.Seq)
+	// fmt.Printf("Sending to %s: id=%v; seqn=%v\n", dest.String(), icmp.Id, icmp.Seq)
 
 	packet := new(bytes.Buffer)
 	if err := binary.Write(packet, binary.BigEndian, icmp); err != nil {
@@ -66,7 +66,7 @@ func HigherLvlPing(dest net.IP, payload []byte, timeout time.Duration) (time.Dur
 
 	replyID := binary.BigEndian.Uint16(reply[24:26])
 	replySeq := binary.BigEndian.Uint16(reply[26:28])
-	fmt.Printf("Received reply from %s: id=%v, seq=%v\n", dest.String(), replyID, replySeq)
+	// fmt.Printf("Received reply from %s: id=%v, seq=%v\n", dest.String(), replyID, replySeq)
 
 	if replyID != icmp.Id || replySeq != icmp.Seq {
 		return 0, false, fmt.Errorf("Error mismatched reply id or sequence number")
@@ -114,7 +114,7 @@ func (icmp *ICMPPacket) Unmarshal(b []byte) error {
 	icmp.Id = binary.BigEndian.Uint16(b[4:6])
 	icmp.Seq = binary.BigEndian.Uint16(b[6:8])
 
-	fmt.Printf("Parsed ICMP: Type=%d, Code=%d, ID=%d, Seq=%d\n", icmp.Type, icmp.Code, icmp.Id, icmp.Seq)
+	// fmt.Printf("Parsed ICMP: Type=%d, Code=%d, ID=%d, Seq=%d\n", icmp.Type, icmp.Code, icmp.Id, icmp.Seq)
 
 	if len(b) > 8 {
 		icmp.Payload = make([]byte, len(b)-8)
@@ -190,7 +190,7 @@ func (c *Client) ReceiveICMP() (*ICMPPacket, time.Duration, bool, error) {
 	}
 
 	// check whether ids are correct and the type is response (0)
-	fmt.Printf("ID: %v : %v\nTYPE: %v\n", icmp.Id, c.ICMP_ID, icmp.Type)
+	// fmt.Printf("ID: %v : %v\nTYPE: %v\n", icmp.Id, c.ICMP_ID, icmp.Type)
 	// if icmp.Id != c.ICMP_ID || icmp.Type != 0 {
 	// 	return nil, 0, false, fmt.Errorf("Error unexpected icmp response packet\n")
 	// }

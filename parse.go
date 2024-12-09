@@ -31,13 +31,13 @@ func ParseIPInputs(ips []string) (string, string, bool, error) {
 		addrEnd = ResolveHostname(ips[1])
 	}
 
-	fmt.Printf("Have the start: %v; and end: %v\n", addrStart, addrEnd)
+	// fmt.Printf("Have the start: %v; and end: %v\n", addrStart, addrEnd)
 
 	return addrStart, addrEnd, false, nil
 }
 
 func ResolveHostname(input string) string {
-	fmt.Println("Resolving hostname on ", input)
+	// fmt.Println("Resolving hostname on ", input)
 	ips, err := net.LookupIP(input)
 	if err != nil || len(ips) == 0 {
 		fmt.Println("Error looking up the host to resolve")
@@ -48,7 +48,7 @@ func ResolveHostname(input string) string {
 
 func GenerateIPs(startIP, endIP string) []net.IP {
 	var ips []net.IP
-	fmt.Printf("Generating from %v to %v\n", startIP, endIP)
+	// fmt.Printf("Generating from %v to %v\n", startIP, endIP)
 	start := net.ParseIP(startIP)
 	if start == nil {
 		log.Fatalf("Error parsing start IP: %s\n", startIP)
@@ -67,7 +67,7 @@ func GenerateIPs(startIP, endIP string) []net.IP {
 			log.Fatalf("Error incrementing IP %v\n", ip)
 		}
 	}
-	log.Printf("Generated IPs to from %v to %v ... \n", startIP, endIP)
+	// log.Printf("Generated IPs to from %v to %v ... \n", startIP, endIP)
 
 	return ips
 }
@@ -103,7 +103,7 @@ func GenerateIPsFromCIDR(input string) []net.IP {
 			log.Fatalf("Error incrementing IP %v\n", ip)
 		}
 	}
-	log.Printf("Generating IPs to scan from %v to %v ... \n", ips[0], ips[len(ips)-1])
+	// log.Printf("Generating IPs to scan from %v to %v ... \n", ips[0], ips[len(ips)-1])
 
 	return ips
 }
@@ -116,7 +116,7 @@ func inc(ip net.IP) (net.IP, bool) {
 	newIP := make(net.IP, len(ip))
 	copy(newIP, ip)
 
-	fmt.Printf("Incrementing IP: %v\n", ip)
+	// fmt.Printf("Incrementing IP: %v\n", ip)
 
 	// increment from the last byte
 	for i := len(newIP) - 1; i >= 0; i-- {

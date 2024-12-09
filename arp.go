@@ -60,7 +60,7 @@ func (p *ARPPacket) Marshal() ([]byte, error) {
 
 	b[4] = p.HardwareAddrLength
 	b[5] = p.ProtocolLength
-	fmt.Printf("Marshalled the p lenght: %v; and mac length: %v --> %v : %v\n", p.ProtocolLength, p.HardwareAddrLength, b[4], b[5])
+	// fmt.Printf("Marshalled the p lenght: %v; and mac length: %v --> %v : %v\n", p.ProtocolLength, p.HardwareAddrLength, b[4], b[5])
 
 	binary.BigEndian.PutUint16(b[6:8], uint16(p.Operation))
 
@@ -74,7 +74,7 @@ func (p *ARPPacket) Marshal() ([]byte, error) {
 	senderIp := p.SenderIp.To4()
 	// 8 + hardware length to the same + protocol length
 	copy(b[n:n+plen], senderIp[:])
-	fmt.Printf("Sender ip: %v\n", senderIp)
+	// fmt.Printf("Sender ip: %v\n", senderIp)
 	n += plen
 
 	copy(b[n:n+hlen], p.TargetHardwareAddr)
@@ -82,7 +82,7 @@ func (p *ARPPacket) Marshal() ([]byte, error) {
 
 	targetIp := p.TargetIp.To4()
 	copy(b[n:n+plen], targetIp[:])
-	fmt.Printf("Target ip: %v\n", targetIp)
+	// fmt.Printf("Target ip: %v\n", targetIp)
 
 	return b, nil
 }
@@ -109,7 +109,7 @@ func (p *ARPPacket) Unmarshal(b []byte) error {
 		p.ProtocolLength = uint8(4)
 	}
 
-	fmt.Printf("HardwareAddrLength: %d, ProtocolLength: %d\n", p.HardwareAddrLength, p.ProtocolLength)
+	// fmt.Printf("HardwareAddrLength: %d, ProtocolLength: %d\n", p.HardwareAddrLength, p.ProtocolLength)
 
 	p.Operation = Operation(binary.BigEndian.Uint16(b[6:8]))
 
@@ -127,7 +127,7 @@ func (p *ARPPacket) Unmarshal(b []byte) error {
 		return io.ErrUnexpectedEOF
 	}
 
-	fmt.Printf("ARPLen: %d, Total Bytes: %d\n", arplen, len(b))
+	// fmt.Printf("ARPLen: %d, Total Bytes: %d\n", arplen, len(b))
 
 	bb := make([]byte, arplen-n)
 
@@ -140,7 +140,7 @@ func (p *ARPPacket) Unmarshal(b []byte) error {
 	copy(bb[hlen:hlen+plen], b[n:n+plen])
 	senderIp := b[n : n+plen]
 
-	fmt.Printf("Sender IP bytes: %x\n", senderIp)
+	// fmt.Printf("Sender IP bytes: %x\n", senderIp)
 
 	p.SenderIp = net.IP(senderIp)
 	n += plen
@@ -163,7 +163,7 @@ func parsePacket(b []byte) (*ARPPacket, *EthernetHeader, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("Unmarshalled the frame")
+	// fmt.Println("Unmarshalled the frame")
 
 	if fr.EtherType != ARP_PROTOCOL {
 		return nil, nil, fmt.Errorf("Invalid ARP packet")
@@ -175,7 +175,7 @@ func parsePacket(b []byte) (*ARPPacket, *EthernetHeader, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("Unmarshalled the packet")
+	// fmt.Println("Unmarshalled the packet")
 
 	return p, fr, nil
 }
@@ -190,7 +190,7 @@ func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
 		}
 		fmt.Println("Read from the connection")
 
-		fmt.Println("Parsing packet")
+		// fmt.Println("Parsing packet")
 		// parsing just to the length read from
 		p, eth, err := parsePacket(buf[:n])
 		if err != nil {
@@ -200,7 +200,7 @@ func (c *Client) ReceiveARP() (*ARPPacket, *EthernetHeader, error) {
 			}
 			return nil, nil, err
 		}
-		fmt.Println("Parsed the packet")
+		// fmt.Println("Parsed the packet")
 		return p, eth, nil
 	}
 }
